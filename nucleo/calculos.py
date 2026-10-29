@@ -53,7 +53,12 @@ def excedeu_limite(registro, agora_dt=None):
     if not config["alerta_ativo"] or registro["saida"] != "":
         return False
     duracao = calcular_duracao(registro, agora_dt)
-    return duracao is not None and duracao > limite_permanencia()
+    if duracao is None:
+        return False
+    # Compara em minutos inteiros, como a permanência é mostrada na tela:
+    # '04h 00min' (mesmo com alguns segundos a mais) ainda está dentro do limite.
+    minutos = timedelta(minutes=duracao // timedelta(minutes=1))
+    return minutos > limite_permanencia()
 
 
 def texto_situacao(registro, agora_dt=None):

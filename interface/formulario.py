@@ -51,7 +51,8 @@ def criar_formulario(pai):
     # (chave, rótulo, opções da lista ou None, linha, coluna, colunas ocupadas)
     principais = [("nome", "Nome da pessoa", None, 0, 0, 2),
                   ("tipo", "Tipo de acesso", TIPOS, 3, 0, 1),
-                  ("motivo", "Motivo da entrada", MOTIVOS, 3, 1, 1),
+                  # A opção em branco permite desfazer a escolha (o motivo é opcional)
+                  ("motivo", "Motivo da entrada", [""] + MOTIVOS, 3, 1, 1),
                   ("entrada", "Data/hora de entrada", None, 6, 0, 1),
                   ("saida", "Data/hora de saída (opcional)", None, 6, 1, 1)]
     for chave, texto, valores, linha, coluna, largura in principais:

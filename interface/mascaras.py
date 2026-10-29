@@ -2,8 +2,9 @@
 
 import re
 import tkinter as tk
+from datetime import datetime
 
-from nucleo.constantes import CARACTERES_INVALIDOS_NOME, MAX_COR, MAX_NOME
+from nucleo.constantes import ANO_MINIMO, CARACTERES_INVALIDOS_NOME, MAX_COR, MAX_NOME
 from nucleo.utilitarios import converter_data, converter_data_simples
 from interface.base import cor
 
@@ -126,11 +127,15 @@ def atualizar_dica_data(rotulo, texto, dica_padrao, com_hora=True):
         faltam = maximo - sum(c.isdigit() for c in texto)
         rotulo.configure(text=f"Faltam {faltam} dígito(s)", fg=cor("suave"))
     else:
-        valida = (converter_data(texto) if com_hora
-                  else converter_data_simples(texto)) is not None
-        if valida:
-            rotulo.configure(text="Data válida" if not com_hora else "Data/hora válida",
-                             fg=cor("verde"))
-        else:
+        data = converter_data(texto) if com_hora else converter_data_simples(texto)
+        if data is None:
             rotulo.configure(text="Data inexistente" if not com_hora
                              else "Data/hora inexistente", fg=cor("vermelho"))
+        elif com_hora and data > datetime.now():
+            # Antecipa as regras semânticas, que serão conferidas ao salvar
+            rotulo.configure(text="Data/hora no futuro", fg=cor("vermelho"))
+        elif com_hora and data.year < ANO_MINIMO:
+            rotulo.configure(text=f"Ano anterior a {ANO_MINIMO}", fg=cor("vermelho"))
+        else:
+            rotulo.configure(text="Data válida" if not com_hora else "Data/hora válida",
+                             fg=cor("verde"))

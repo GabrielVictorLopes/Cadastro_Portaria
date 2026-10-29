@@ -7,7 +7,7 @@ import re
 # ======================================================================
 # CONSTANTES
 # ======================================================================
-VERSAO = "3.0"
+VERSAO = "3.1"
 
 # Arquivos
 # Pasta dos arquivos de dados: dados/, na pasta do projeto (um nível acima de nucleo/)
@@ -17,6 +17,7 @@ ARQ_REGISTROS = "registros.csv"
 ARQ_BACKUP = "registros_backup.csv"
 ARQ_HISTORICO = "historico.csv"
 ARQ_CONFIG = "configuracoes.json"
+ARQ_TRAVA = "portaria.lock"     # impede duas cópias do programa abertas ao mesmo tempo
 
 FORMATO_DATA_HORA = "%d/%m/%Y %H:%M"          # 06/10/2026 09:30
 FORMATO_DATA = "%d/%m/%Y"                     # 06/10/2026
@@ -28,6 +29,16 @@ TIPOS = ["Visitante", "Morador", "Entregador", "Funcionário"]
 MOTIVOS = ["Visita", "Entrega", "Serviço", "Reunião", "Manutenção",
            "Moradia", "Outro"]
 FILTRO_TIPOS = ["Todos"] + TIPOS
+# DDDs existentes no Brasil (plano de numeração da Anatel)
+DDDS_VALIDOS = {
+    "11", "12", "13", "14", "15", "16", "17", "18", "19", "21", "22", "24", "27",
+    "28", "31", "32", "33", "34", "35", "37", "38", "41", "42", "43", "44", "45",
+    "46", "47", "48", "49", "51", "53", "54", "55", "61", "62", "63", "64", "65",
+    "66", "67", "68", "69", "71", "73", "74", "75", "77", "79", "81", "82", "83",
+    "84", "85", "86", "87", "88", "89", "91", "92", "93", "94", "95", "96", "97",
+    "98", "99"}
+# Um texto que começa com um destes caracteres vira fórmula ao abrir o CSV no Excel
+INICIO_FORMULA = ("=", "+", "-", "@", "\t", "\r")
 # Opções do filtro "Situação": com o alerta de tempo máximo ativo, quem está
 # no local é separado em "No prazo" e "Excedido".
 FILTRO_SITUACOES = ["Todos", "No local", "Saiu"]

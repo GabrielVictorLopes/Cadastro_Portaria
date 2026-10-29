@@ -5,13 +5,43 @@ import json
 import os
 from datetime import datetime
 
+if os.name == "nt":
+    import msvcrt
+else:
+    import fcntl
+
 from nucleo.constantes import (
-    ARQ_BACKUP, ARQ_CONFIG, ARQ_HISTORICO, ARQ_REGISTROS, CABECALHO_CSV,
+    ARQ_BACKUP, ARQ_CONFIG, ARQ_HISTORICO, ARQ_REGISTROS, ARQ_TRAVA, CABECALHO_CSV,
     CABECALHO_HISTORICO, CHAVES_CSV, CONFIG_PADRAO, FORMATO_DATA_HORA,
     FORMATO_EVENTO, PALETAS, TIPOS)
 from nucleo.estado import S, config, registros
 from nucleo.utilitarios import (
-    CHAVES_CABECALHO, caminho, converter_data, remover_acentos)
+    CHAVES_CABECALHO, TIPOS_NORMALIZADOS, caminho, converter_data, remover_acentos)
+
+
+# ======================================================================
+# TRAVA: UMA CÓPIA DO PROGRAMA POR VEZ
+# Duas cópias abertas gravariam o arquivo inteiro uma por cima da outra.
+# A trava é do sistema operacional: some sozinha se o programa fechar
+# ou travar, então nunca fica "presa".
+# ======================================================================
+def obter_trava():
+    """Trava dados/portaria.lock. Retorna False se outra cópia já está aberta."""
+    try:
+        arquivo = open(caminho(ARQ_TRAVA), "a+")
+    except OSError:
+        return True             # sem como criar a trava: não impede o uso
+    try:
+        if os.name == "nt":
+            arquivo.seek(0)
+            msvcrt.locking(arquivo.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            fcntl.flock(arquivo.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        arquivo.close()
+        return False
+    S.trava = arquivo           # mantido aberto até o programa fechar
+    return True
 
 
 # ======================================================================
@@ -169,7 +199,9 @@ def carregar_registros():
     registros.clear()
     avisos = []
     arquivo = caminho(ARQ_REGISTROS)
-    S.proximo_id = max(1, config["proximo_id"])
+    # O histórico também guarda os IDs já usados: mesmo que configuracoes.json
+    # se perca, um ID de registro excluído não volta a ser usado.
+    S.proximo_id = max(1, config["proximo_id"], maior_id_historico() + 1)
     if not os.path.exists(arquivo):
         return avisos
 
@@ -217,6 +249,12 @@ def carregar_registros():
         else:
             avisos.append(f"Linha {numero_linha}: dados incompletos (ignorada).")
             continue
+
+        # Tipo digitado sem acento ou com outras maiúsculas ('funcionario') é corrigido
+        tipo = TIPOS_NORMALIZADOS.get(remover_acentos(dados["tipo"]))
+        if tipo is not None and tipo != dados["tipo"]:
+            dados["tipo"] = tipo
+            precisa_regravar = True
 
         erro = validar_dados_csv(dados)
         if erro != "":
@@ -291,6 +329,7 @@ def registrar_historico(acao, numero_id, nome, descricao):
                  nome, descricao])
         return True
     except OSError:
+        S.falha_historico = True        # a interface avisa o usuário
         return False
 
 
@@ -311,6 +350,12 @@ def ler_historico():
                         "descricao": l[4]})
     eventos.reverse()
     return eventos
+
+
+def maior_id_historico():
+    """Maior ID de registro citado no histórico (0 se não houver)."""
+    ids = [int(e["id"]) for e in ler_historico() if e["id"].isdigit()]
+    return max(ids, default=0)
 
 
 def filtrar_historico(eventos, texto="", acao="Todas", data_ini=None, data_fim=None):

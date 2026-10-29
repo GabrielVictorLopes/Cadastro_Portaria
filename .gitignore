@@ -1,0 +1,9 @@
+# Dados de uso real: contêm dados pessoais (LGPD) e nunca devem ser versionados
+dados/
+
+# Arquivos gerados automaticamente pelo Python
+__pycache__/
+*.py[cod]
+
+# Arquivos temporários
+*.tmp

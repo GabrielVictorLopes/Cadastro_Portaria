@@ -3,8 +3,9 @@
 from datetime import datetime
 
 from nucleo.constantes import (
-    ANO_MINIMO, CHAVES_TEXTO, FORMATO_DATA_HORA, MAX_COR, MAX_EMPRESA, MAX_MODELO,
-    MAX_NOME, MAX_OBSERVACOES, MOTIVOS, PADRAO_NOME, PADRAO_PLACA, ROTULOS, TIPOS)
+    ANO_MINIMO, CHAVES_TEXTO, DDDS_VALIDOS, FORMATO_DATA_HORA, INICIO_FORMULA,
+    MAX_COR, MAX_EMPRESA, MAX_MODELO, MAX_NOME, MAX_OBSERVACOES, MOTIVOS,
+    PADRAO_NOME, PADRAO_PLACA, ROTULOS, TIPOS)
 from nucleo.estado import registros
 from nucleo.utilitarios import converter_data, limpar_espacos
 
@@ -90,8 +91,8 @@ def validar_telefone(texto):
         return True, ""
     if len(digitos) not in (10, 11):
         return False, "O telefone deve ter 10 ou 11 dígitos, com DDD."
-    if "0" in digitos[:2]:                       # não existe DDD 0X nem X0
-        return False, "O DDD do telefone é inválido."
+    if digitos[:2] not in DDDS_VALIDOS:
+        return False, f"O DDD {digitos[:2]} não existe."
     if len(digitos) == 11 and digitos[2] != "9":
         return False, "Telefone com 11 dígitos deve começar com 9 depois do DDD."
     return True, formatar_telefone(digitos)
@@ -167,6 +168,13 @@ def validar_dados(dados, agora_dt=None):
         if len(d[campo]) > maximo:
             return None, (campo, "Texto muito longo",
                           f"{ROTULOS[campo]}: máximo de {maximo} caracteres.")
+
+    # Segurança: um texto que começa com '=', '+', '-' ou '@' seria executado
+    # como fórmula se o registros.csv fosse aberto no Excel (injeção de CSV).
+    for campo in ("empresa", "modelo", "observacoes"):
+        if d[campo].startswith(INICIO_FORMULA):
+            return None, (campo, "Texto não permitido",
+                          f"{ROTULOS[campo]} não pode começar com =, +, - ou @.")
 
     return d, None
 

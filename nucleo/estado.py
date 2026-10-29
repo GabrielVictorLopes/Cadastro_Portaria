@@ -25,6 +25,8 @@ S = SimpleNamespace(
     id_status=None,               # temporizador da mensagem da barra de status
     ticks=0,
     dia_tabela=None,              # dia em que a tabela foi filtrada ("Hoje" muda à meia-noite)
+    falha_historico=False,        # alguma linha do histórico não pôde ser gravada (avisar)
+    trava=None,                   # arquivo de trava aberto enquanto o programa roda
 )
 
 # Widgets da interface (criados em criar_interface)

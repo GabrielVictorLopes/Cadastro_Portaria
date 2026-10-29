@@ -4,10 +4,10 @@ import csv
 import os
 
 from nucleo.constantes import (
-    ARQ_BACKUP, ARQ_CONFIG, ARQ_HISTORICO, ARQ_REGISTROS, CABECALHO_HISTORICO,
-    PASTA_DADOS)
+    ARQ_BACKUP, ARQ_CONFIG, ARQ_HISTORICO, ARQ_REGISTROS, ARQ_TRAVA,
+    CABECALHO_HISTORICO, INICIO_FORMULA, PASTA_DADOS)
 from nucleo.utilitarios import formatar_placa
-from nucleo.calculos import calcular_permanencia, calcular_situacao
+from nucleo.calculos import calcular_permanencia, calcular_situacao, excedeu_limite
 
 
 # ======================================================================
@@ -16,7 +16,7 @@ from nucleo.calculos import calcular_permanencia, calcular_situacao
 def proteger_excel(valor):
     """Evita que o Excel interprete um texto como fórmula (=, +, -, @)."""
     texto = str(valor)
-    if texto[:1] in ("=", "+", "-", "@", "\t", "\r"):
+    if texto.startswith(INICIO_FORMULA):
         return "'" + texto
     return texto
 
@@ -24,15 +24,24 @@ def proteger_excel(valor):
 def eh_arquivo_do_sistema(destino):
     """
     True se o destino é um arquivo de dados do sistema (registros, backup,
-    histórico, configurações ou cópia original). No Windows a comparação
-    ignora maiúsculas/minúsculas ('REGISTROS.CSV' é o mesmo arquivo).
+    histórico, configurações, trava, temporários ou cópia original). No
+    Windows a comparação ignora maiúsculas/minúsculas ('REGISTROS.CSV' é o
+    mesmo arquivo).
     """
     pasta, nome = os.path.split(os.path.normcase(os.path.abspath(destino)))
     if pasta != os.path.normcase(os.path.abspath(PASTA_DADOS)):
         return False
     protegidos = {os.path.normcase(n) for n in
-                  (ARQ_REGISTROS, ARQ_BACKUP, ARQ_HISTORICO, ARQ_CONFIG)}
-    return nome in protegidos or nome.startswith(os.path.normcase("registros_original_"))
+                  (ARQ_REGISTROS, ARQ_BACKUP, ARQ_HISTORICO, ARQ_CONFIG, ARQ_TRAVA)}
+    return (nome in protegidos or nome.endswith(".tmp")
+            or nome.startswith(os.path.normcase("registros_original_")))
+
+
+def situacao_exportada(registro, agora_dt=None):
+    """Situação como aparece na tela, sem os símbolos: 'No local', 'Excedido' ou 'Saiu'."""
+    if excedeu_limite(registro, agora_dt):
+        return "Excedido"
+    return calcular_situacao(registro)
 
 
 def exportar_csv(arquivo, cabecalho, linhas):
@@ -57,7 +66,7 @@ def linhas_exportacao_registros(lista, agora_dt=None):
                  "Situação", "Motivo", "Telefone", "Empresa", "Pessoa visitada",
                  "Placa", "Modelo", "Cor", "Observações"]
     linhas = [[r["id"], r["nome"], r["tipo"], r["entrada"], r["saida"],
-               calcular_permanencia(r, agora_dt), calcular_situacao(r),
+               calcular_permanencia(r, agora_dt), situacao_exportada(r, agora_dt),
                r["motivo"], r["telefone"], r["empresa"], r["visitado"],
                formatar_placa(r["placa"]), r["modelo"], r["cor"],
                r["observacoes"]] for r in lista]

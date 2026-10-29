@@ -11,7 +11,7 @@ from nucleo.calculos import (
     calcular_permanencia, calcular_situacao, excedeu_limite, texto_situacao)
 from nucleo.persistencia import filtrar_historico, ler_historico
 from nucleo.consultas import calcular_indicadores, chave_ordenacao, filtrar_registros
-from interface.base import escrever_texto, preencher_tabela
+from interface.base import escrever_texto, mostrar_status, preencher_tabela
 
 
 def criterios_atuais():
@@ -71,6 +71,10 @@ def atualizar_tempos():
     """A cada minuto: atualiza permanência e alertas SEM redesenhar a tabela inteira."""
     agora_dt = datetime.now()
     if S.dia_tabela != agora_dt.date():   # virou o dia: "Hoje"/"Ontem" mudaram
+        atualizar_tabela()
+        return
+    if T.var_filtro_situacao.get() in ("No prazo", "Excedido"):
+        # Com o tempo, quem estava "No prazo" passa a "Excedido": refiltra
         atualizar_tabela()
         return
     for item in T.tabela.get_children():
@@ -196,3 +200,7 @@ def atualizar_historico():
     preencher_tabela(T.tabela_historico, [(e["data"], e["acao"], e["id"], e["nome"],
                                            e["descricao"]) for e in eventos])
     T.rotulo_hist.configure(text=f"{len(eventos)} evento(s) exibido(s)")
+    if S.falha_historico:
+        S.falha_historico = False
+        mostrar_status("Atenção: a última atividade não pôde ser gravada no histórico "
+                       "(historico.csv pode estar aberto em outro programa).", "erro")
